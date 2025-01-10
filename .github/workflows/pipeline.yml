@@ -17,3 +17,10 @@ jobs:
     defaults:
       run:
         working-directory: $PUSH_DIR
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: test
+        run: echo $PUSH_DIR
