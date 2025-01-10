@@ -1,0 +1,19 @@
+name: Databricks App Pipeline
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  PUSH_DIR: changed_folders=$(git diff-tree --no-commit-id --name-only -r HEAD | awk -F'/' '{print $1}' | sort | uniq)
+
+jobs:
+  Deploy:
+    name: Make App Distribution
+    runs-on: ubuntu-latest
+
+    environment: databricks
+
+    defaults:
+      run:
+        working-directory: $PUSH_DIR
