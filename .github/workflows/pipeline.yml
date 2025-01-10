@@ -4,9 +4,6 @@ on:
   push:
     branches: ["main"]
 
-env:
-  PUSH_DIR: changed_folders=$(git diff-tree --no-commit-id --name-only -r HEAD | awk -F'/' '{print $1}' | sort | uniq)
-
 jobs:
   Deploy:
     name: Make App Distribution
@@ -16,5 +13,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: test
+      - name: Set PUSH_DIR
+        id: set_push_dir
+        run: |
+          changed_folders=$(git diff-tree --no-commit-id --name-only -r HEAD | awk -F'/' '{print $1}' | sort | uniq)
+          echo "PUSH_DIR=$changed_folders" >> $GITHUB_ENV
+
+      - name: Test PUSH_DIR
         run: echo $PUSH_DIR
