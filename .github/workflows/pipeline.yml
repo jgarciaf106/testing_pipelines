@@ -1,23 +1,50 @@
-name: Databricks App Pipeline
+name: Pipeline Test
 
 on:
   push:
     branches: ["main"]
 
 jobs:
-  Deploy:
-    name: Make App Distribution
+  custom_schedule:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set PUSH_DIR
-        id: set_push_dir
+      - name: Check Date for Custom Schedule
+        id: date-check
         run: |
-          changed_folders=$(git diff-tree --no-commit-id --name-only -r HEAD | awk -F'/' '{print $1}' | sort | uniq)
-          echo "PUSH_DIR=$changed_folders" >> $GITHUB_ENV
+          TODAY=$(date +%Y-%m-%d)
+          DAY_OF_WEEK=$(date +%u)  # 1=Monday, 7=Sunday
+          DAY=$(date +%d)
+          MONTH=$(date +%m)
+          YEAR=$(date +%Y)
 
-      - name: Test PUSH_DIR
-        run: echo $PUSH_DIR
+          # Calculate the first Sunday and third Sunday of the month
+          FIRST_SUNDAY=$(date -d "$YEAR-$MONTH-01 +$((7 - $(date -d $YEAR-$MONTH-01 +%u) % 7)) days" +%Y-%m-%d)
+          THIRD_SUNDAY=$(date -d "$FIRST_SUNDAY +14 days" +%Y-%m-%d)
+
+          # Calculate the first Monday after the first Sunday and third Sunday
+          FIRST_MONDAY_AFTER_FIRST_SUNDAY=$(date -d "$FIRST_SUNDAY +1 day" +%Y-%m-%d)
+          FIRST_MONDAY_AFTER_THIRD_SUNDAY=$(date -d "$THIRD_SUNDAY +1 day" +%Y-%m-%d)
+
+          # Calculate the Saturday before these Mondays
+          SATURDAY_BEFORE_FIRST_MONDAY=$(date -d "$FIRST_MONDAY_AFTER_FIRST_SUNDAY -2 days" +%Y-%m-%d)
+          SATURDAY_BEFORE_THIRD_MONDAY=$(date -d "$FIRST_MONDAY_AFTER_THIRD_SUNDAY -2 days" +%Y-%m-%d)
+
+          # Check if today matches any of the dates
+          if [[ "$TODAY" == "$FIRST_MONDAY_AFTER_FIRST_SUNDAY" || \
+                "$TODAY" == "$FIRST_MONDAY_AFTER_THIRD_SUNDAY" || \
+                "$TODAY" == "$SATURDAY_BEFORE_FIRST_MONDAY" || \
+                "$TODAY" == "$SATURDAY_BEFORE_THIRD_MONDAY" ]]; then
+            echo "Custom schedule matched: $TODAY"
+            echo "run=true" >> $GITHUB_ENV
+          else
+            echo "No match: $TODAY"
+            echo "run=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run on Custom Schedule
+        if: env.run == 'true'
+        run: echo "This workflow runs on the custom schedule."
+
+      - name: Run on Custom Schedule
+        if: env.run == 'false'
+        run: echo "This workflow did not run."
