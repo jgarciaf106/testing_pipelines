@@ -1,0 +1,49 @@
+name: Databricks App Pipeline
+
+on:
+  push:
+    branches: ["main"]
+
+# env:
+#   DATABRICKS_CLIENT_ID: ${{secrets.DATABRICKS_CLIENT_ID}}
+#   DATABRICKS_CLIENT_SECRET: ${{secrets.DATABRICKS_CLIENT_SECRET}}
+#   DATABRICKS_HOST: ${{secrets.DATABRICKS_HOST}}
+
+jobs:
+  get-deployed-app:
+    name: Get deployed app.
+    runs-on: ubuntu-latest
+    outputs:
+      push-dir: ${{ steps.get_changed_folders.outputs.push_dir }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get changed folders
+        id: get_changed_folders
+        run: |
+          # Get changed folders
+          CHANGED_FOLDERS=$(git diff-tree --no-commit-id --name-only -r HEAD | awk -F'/' '{print $1}' | sort | uniq)
+          echo "PUSH_DIR=${CHANGED_FOLDERS}" >> $GITHUB_STATE
+          echo "push_dir=${CHANGED_FOLDERS}" >> $GITHUB_OUTPUT
+          
+  Deploy:
+    name: Make App Distribution
+    runs-on: ubuntu-latest
+    needs: get-deployed-app
+    environment: databricks
+
+    defaults:
+      run:
+        working-directory:  ${{ needs.get-deployed-app.outputs.push-dir }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: test
+        run: |
+          echo "Deploying to folder: ${{ needs.get-changed-folders.outputs.push-dir }}"
