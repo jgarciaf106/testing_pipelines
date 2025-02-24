@@ -6,40 +6,40 @@ on:
 
 jobs:
   get-deployed-app:
-    name: Get deployed app.
+    name: Get deployed app
     runs-on: ubuntu-latest
     outputs:
       push-dir: ${{ steps.get_changed_folders.outputs.push_dir }}  # Output the push_dir from the step
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
+        with:
+          fetch-depth: 0  # Fetch all history to properly check differences
+          
       - name: Get changed folders
         id: get_changed_folders
         run: |
           # Get changed folders
           CHANGED_FOLDERS=$(git diff-tree --no-commit-id --name-only -r HEAD | awk -F'/' '{print $1}' | sort | uniq)
-          echo "PUSH_DIR=${CHANGED_FOLDERS}" >> $GITHUB_STATE
+          echo "PUSH_DIR=${CHANGED_FOLDERS}" >> $GITHUB_ENV
           echo "push_dir=${CHANGED_FOLDERS}" >> $GITHUB_OUTPUT
-          echo $push_dir
-
-  Deploy:
+          echo "Changed folders: ${CHANGED_FOLDERS}"
+          
+  deploy:
     name: Make App Distribution
     runs-on: ubuntu-latest
     needs: get-deployed-app  # Ensure this job runs after 'get-deployed-app'
     environment: databricks
-
     defaults:
       run:
         working-directory: ${{ needs.get-deployed-app.outputs.push-dir }}  # Correctly reference push-dir output from the previous job
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
       - name: Setup databricks CLI
         uses: databricks/setup-cli@main
-
+        
       - name: test
         run: |
           echo "Deploying to folder: ${{ needs.get-deployed-app.outputs.push-dir }}"
