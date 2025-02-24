@@ -21,6 +21,7 @@ jobs:
           CHANGED_FOLDERS=$(git diff-tree --no-commit-id --name-only -r HEAD | awk -F'/' '{print $1}' | sort | uniq)
           echo "PUSH_DIR=${CHANGED_FOLDERS}" >> $GITHUB_STATE
           echo "push_dir=${CHANGED_FOLDERS}" >> $GITHUB_OUTPUT
+          echo $push_dir
 
   Deploy:
     name: Make App Distribution
