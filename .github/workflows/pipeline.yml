@@ -24,11 +24,34 @@ jobs:
           echo "PUSH_DIR=${CHANGED_FOLDERS}" >> $GITHUB_ENV
           echo "push_dir=${CHANGED_FOLDERS}" >> $GITHUB_OUTPUT
           echo "Changed folders: ${CHANGED_FOLDERS}"
+
+      - name: Validate changes
+        id: validate_changes
+        run: |
+          # Get changed folders and filter out root files and dot folders
+          VALID_FOLDERS=$(git diff-tree --no-commit-id --name-only -r HEAD | 
+                          grep -v "^[^/]*$" |  # Remove files in root directory
+                          awk -F'/' '{print $1}' | 
+                          grep -v "^\." |       # Remove dot folders like .github
+                          sort | uniq)
+          
+          # Check if there are any valid folders
+          if [ -z "$VALID_FOLDERS" ]; then
+            echo "No valid folder changes detected, skipping deployment"
+            echo "valid_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Valid folder changes detected: $VALID_FOLDERS"
+            echo "valid_changes=true" >> $GITHUB_OUTPUT
+            # Update push_dir to only include valid folders
+            echo "push_dir=${VALID_FOLDERS}" >> $GITHUB_OUTPUT
+          fi
           
   deploy:
     name: Make App Distribution
     runs-on: ubuntu-latest
     needs: get-deployed-app  # Ensure this job runs after 'get-deployed-app'
+
+    if: needs.get-deployed-app.outputs.valid-changes == 'true'
     environment: databricks
     defaults:
       run:
